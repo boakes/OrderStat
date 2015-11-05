@@ -136,11 +136,22 @@ public:
         bool operator!=(const const_iterator &i) const { return !(*this==i); }
         const T &operator*() { return loc->data;}
         const_iterator &operator++() {
-            // TODO
+            Node* tmp = Successor(loc);
+            if(tmp == nullptr){
+                itrend = true;
+            }else{
+                loc = tmp;
+                itrend=false;
+            }
             return *this;
         }
+
         const_iterator &operator--() {
-            // TODO
+            if(itrend){
+                itrend = false;
+            }else{
+                loc = Predecessor(loc);
+            }
             return *this;
         }
         const_iterator operator++(int) {
@@ -170,23 +181,26 @@ public:
        clear();
     } 
 
-    void helpCopier(Node *x){
+   Node* helpCopier(Node *x,Node* prt){
+        Node* tmp; 
         if(x!=nullptr){
-            helpCopier(x->left);
-            insert(x->data);
-            helpCopier(x->right);
-        }
+            tmp = new Node(nullptr,nullptr,nullptr,x->data,x->ht);
+            tmp->parent = prt;
+            tmp->left = helpCopier(x->left,tmp);
+            tmp->right = helpCopier(x->right,tmp);
+            return tmp;
+        } else return nullptr; 
     }
 
     OrderStat(const OrderStat<T> &that) {
         root = nullptr;
-        helpCopier(that.root);
+        root = helpCopier(that.root,root);
     }
 
     OrderStat &operator=(const OrderStat<T> &that) {
         clear();
-        root =nullptr;
-        helpCopier(that.root);
+        root=nullptr;
+        helpCopier(that.root,root);
         return *this;
     }
 
@@ -272,7 +286,7 @@ public:
          }
     }  
 
-    int height(Node* x){
+    int height(Node* x) const{
         if(x==nullptr){
             return 0;
         } else return x->ht;
@@ -302,17 +316,24 @@ public:
     }
 
     iterator insert(const_iterator position,const value_type& val){
-        iterator tmp = iterator(position.loc,position.itrend);
+         iterator tmp = iterator(position.loc,position.itrend);
         if(position == cbegin()){
             push_front(val);
-            fixheight(position.loc->left);
-            balance(position.loc->left);
+            fixheight(cbegin().loc);
+            balance(cbegin().loc);
         } else {
             position--;
             Node* thingish = position.loc->right;
             position.loc->right = new Node(thingish,nullptr,position.loc,val,1);
-            fixheight(position.loc->right);
-            balance(position.loc->right);
+            if(thingish != nullptr) {
+                thingish->parent = position.loc->right;
+                fixheight(thingish);
+                balance(thingish);
+            } else {
+                fixheight(position.loc->right);
+                balance(position.loc->right);
+            }
+            
         }
         tmp--;
         return tmp; 
@@ -332,8 +353,8 @@ public:
                 ++itertmp;
                 Node* tmp = z->right;
                 transplant(z,z->right);
+                fixheight(z);
                 delete z;
-                fixheight(maxNode(tmp));
                 balance(tmp);
                 return itertmp;
         }else if(z->right == nullptr){
@@ -404,9 +425,12 @@ public:
         balance(x);
     }
 
-    void pop_front(){
+   void pop_front(){
         //Use AVLMap's erase on the min node
-        erase(iterator(minNode(root),false));
+        //fixheightSize(minNode(root));
+        erase(const_iterator(minNode(root),false));
+        fixheight(minNode(root));
+        balance(minNode(root));
     }
     void push_back(const value_type& val){
         if(root==nullptr){
@@ -424,22 +448,25 @@ public:
 
     void pop_back(){
         //use AVLMap's erase on the max node
-        erase(iterator(maxNode(root),false));
+        //fixheightSize(maxNode(root));
+        erase(const_iterator(maxNode(root),false));
+        fixheight(maxNode(root));
+        balance(maxNode(root));
     }
 
-    bool operator==(const OrderStat<T>& rhs) const{
-        if(height(root) != rhs.height(rhs.getroot())){
+   bool operator==(const OrderStat<T>& rhs) const{
+        if(size() != rhs.size()){        
             return false;
         }
         const_iterator rsitr = rhs.cbegin();
         for(auto x = cbegin(); x!= cend(); ++x){
-            if(x != rsitr){
+            if(x.loc->data != rsitr.loc->data){
                 return false;
             }
-            rsitr++;
+            ++rsitr;
         }
         return true;
-    }
+    } 
 
     bool operator!=(const OrderStat<T>& rhs) const{
         return !(*this==rhs);
