@@ -12,7 +12,6 @@ class OrderStat {
         Node* parent; 
         T data; 
         int ht; 
-        int size; 
         Node(Node* r, Node* l, Node* p, T d,int h){
             right = r;
             left = l;
